@@ -1,5 +1,5 @@
 # based on /etc/skel/.bashrc
-# vim: sr ts=4 sw=4 smartindent:
+# vim: et sr ts=4 sw=4 smartindent:
 # This file is sourced by all *interactive* bash shells on startup,
 # including some apparently interactive shells such as scp and rcp
 # that can't tolerate any output.  So make sure this doesn't display
@@ -9,21 +9,22 @@
 # past this point for scp and rcp, and it's important to refrain from
 # outputting anything in those cases.
 if [[ $- != *i* ]] ; then
-        # Shell is non-interactive.  Be done now!
-        return
+	# Shell is non-interactive.  Be done now!
+	return
 fi
 
 . /etc/skel/.bashrc
 
-# Put your fun stuff here.
 function pointFleet_help() {
-    echo "usage: pointFleet clusterName e.g pointFleet some_cluster # sets FLEETCTL_TUNNEL env var to point to some_cluster (used by fleet)"
+    echo "usage: pointFleet clusterName e.g pointFleet some_cluster # sets FLEETCTL_TUNNEL env var to some_cluster-tunnel.example.com"
+    echo "       ... ASSUMES you have set DNS (or host entry) for your cluster."
 }
+# TODO: if passed IP, should validate but skip all that DNS checking ...
 function pointFleet() {
     setClusterName "${1-$clusterName}" || return 1
 
     echo "... pointing fleet to cluster [$clusterName]"
-    domainSuffix="tunnel-up.ft.com"
+    domainSuffix="tunnel.example.com"
 
     FLEETCTL_TUNNEL="${clusterName}-${domainSuffix}"
 
@@ -63,7 +64,8 @@ function addKey() {
 }
 
 function goCluster_help() {
-    echo "usage: goCluster clusterName e.g. goCluster some_cluster # will set up an ssh agent with full keyring and ssh you to the cluster with agent forwarding"
+    echo "usage: goCluster clusterName e.g. goCluster some_cluster # create ssh agent with keyring"
+	echo "       and ssh to cluster with agent forwarding"
 }
 function goCluster() {
     setClusterName "${1-$clusterName}" || return 1
@@ -73,7 +75,8 @@ function goCluster() {
 }
 
 function setClusterName_help() {
-    echo "usage: setClusterName clusterName e.g setClusterName some_cluster # sets clusterName env var (used by other helper functions to determine cluster)"
+    echo "usage: setClusterName clusterName e.g setClusterName some_cluster # sets clusterName env var"
+	echo "       ... used by other helper functions to determine cluster"
 }
 function setClusterName() {
     if [[ -z "$1" ]]; then
@@ -88,11 +91,11 @@ function setClusterName() {
 }
 
 function devbox_help() {
-        echo 'usage: devbox <host dir> [<image:-dev_basic>] # start up a bash session on a dev_basic docker container, mounting your project dir'
+	echo 'usage: devbox <volume map> [<image:-dev_basic>] # drop in to a docker container, with mapped vols'
 }
 function devbox() {
     if [[ -z "$1" ]]; then
-        echo 'ERROR: usage: devbox <hostdir1:hostdir2:...> [<image:-devbox>]'
+        echo 'ERROR: usage: devbox <hostdir1:hostdir2:...> [<image:-dev_basic>]'
         echo '... hostdir /this/path/example:/that/path/boo will be mounted under'
         echo '    /example and /boo respectively'
         return 1
@@ -135,7 +138,9 @@ export PATH=$PATH:$HOME/local/terraform_0.6.14
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$')
 do
-    printf "%15s () $(${func}_help)\n" $func
+# TODO: split help_txt so each line printed via format
+    help_txt=$(${func}_help)
+    printf "%15s () $help_txt\n" $func
 done
 
 
