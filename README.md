@@ -16,7 +16,7 @@ I use this repo to demonstrate how to
 * customise the [coreos-vagrant](https://github.com/coreos/coreos-vagrant/) project to handle
   * users with different git core.autocrlf settings on different o/s
   * automated distribution of personal ssh keys, 
-  * functions to make fleet easier
+  * example functions to make fleet cluster navigation easier
 * automate creation of ephemeral [Docker](https://www.docker.com/what-docker) 'workspaces'
   with volumes shared from the coreos host (and synced with folders on their physical workstation)
 
@@ -25,3 +25,5 @@ This is not a fork, only a limited use-case example.
 ## See Also
 
 * [automating distribution of ssh keys](files/ssh_keys/README.ssh_keys.md)
+* [example helper functions for cluster navigation](files/.bashrc)
+* [example Dockerfile for a basic workspace](files/builds/docker/images/dev_basic/Dockerfile)
