@@ -17,7 +17,7 @@ fi
 
 # Put your fun stuff here.
 function pointFleet_help() {
-    echo "usage: pointFleet clusterName e.g pointFleet dynpub-uk # sets FLEETCTL_TUNNEL env var (used by fleet to access cluster)"
+    echo "usage: pointFleet clusterName e.g pointFleet some_cluster # sets FLEETCTL_TUNNEL env var to point to some_cluster (used by fleet)"
 }
 function pointFleet() {
     setClusterName "${1-$clusterName}" || return 1
@@ -63,7 +63,7 @@ function addKey() {
 }
 
 function goCluster_help() {
-    echo "usage: goCluster clusterName e.g. goCluster dynpub-uk # will set up an ssh agent with full keyring and ssh you to the cluster with agent forwarding"
+    echo "usage: goCluster clusterName e.g. goCluster some_cluster # will set up an ssh agent with full keyring and ssh you to the cluster with agent forwarding"
 }
 function goCluster() {
     setClusterName "${1-$clusterName}" || return 1
@@ -73,7 +73,7 @@ function goCluster() {
 }
 
 function setClusterName_help() {
-    echo "usage: setClusterName clusterName e.g setClusterName dynpub-uk # sets clusterName env var (used by other helper functions to determine cluster)"
+    echo "usage: setClusterName clusterName e.g setClusterName some_cluster # sets clusterName env var (used by other helper functions to determine cluster)"
 }
 function setClusterName() {
     if [[ -z "$1" ]]; then
