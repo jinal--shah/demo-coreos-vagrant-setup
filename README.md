@@ -25,7 +25,7 @@ This is not a fork, only a limited use-case example.
 ## _What did you do?_
 
 
-Vagrantfile is modified to account for new features below
+Vagrantfile is modified so I can demo the following:
 
 ### ssh_keys
 
@@ -54,3 +54,15 @@ This drops the user in to a docker container with user-defined volumes mapped fr
 * [example helper functions for cluster navigation](files/.bashrc)
 * [example Dockerfile for a basic workspace](files/builds/docker/images/dev_basic/Dockerfile)
 * [useful info for vagrant shared/synced folders on Windows](README.windows-shared-folders.md)
+
+# Avoid pushing user-data and config.rb to your repo
+
+Vagrant will change these files on a `vagrant up` run.
+
+You won't want to commit those changes. Ignore them like this:
+
+```shell
+    # ... ensure git-add will ignore changes to these files
+    git update-index --assume-unchanged config.rb
+    git update-index --assume-unchanged user-data
+```
