@@ -9,35 +9,49 @@
 # past this point for scp and rcp, and it's important to refrain from
 # outputting anything in those cases.
 if [[ $- != *i* ]] ; then
-	# Shell is non-interactive.  Be done now!
-	return
+    # Shell is non-interactive.  Be done now!
+    return
 fi
 
 . /etc/skel/.bashrc
 
 function pointFleet_help() {
-    echo "usage: pointFleet clusterName e.g pointFleet some_cluster # sets FLEETCTL_TUNNEL env var to some_cluster-tunnel.example.com"
-    echo "       ... ASSUMES you have set DNS (or host entry) for your cluster."
+
+    cat <<EOM
+usage:  pointFleet <clusterName>
+... sets fleet to operate on a specific cluster using IP or DNS name
+e.g
+    pointFleet 178.192.1.2
+
+If you don't use an IP, this will check the name resolves (via DNS or host file)
+EOM
+
 }
-# TODO: if passed IP, should validate but skip all that DNS checking ...
 function pointFleet() {
     setClusterName "${1-$clusterName}" || return 1
 
     echo "... pointing fleet to cluster [$clusterName]"
-    domainSuffix="tunnel.example.com"
 
-    FLEETCTL_TUNNEL="${clusterName}-${domainSuffix}"
-
-    if ! host "$FLEETCTL_TUNNEL" >/dev/null 2>&1
-    then
-            echo "ERROR: $FLEETCTL_TUNNEL:[$FLEETCTL_TUNNEL] does not resolve via DNS."
-            return 1
+    # ... if doesn't look like ipV4 of ipV6, test name resolves ...
+    if [[ $clusterName =~ [^0-9\.] ]] && [[ $clusterName =~ [^0-9a-fA-F:] ]]; then
+        if ! host "$clusterName" >/dev/null 2>&1
+        then
+                echo "ERROR: pointFleet:[$clusterName] does not resolve via DNS."
+                return 1
+        fi
     fi
+    FLEETCTL_TUNNEL="${clusterName}"
+
     export FLEETCTL_TUNNEL
 }
 
 function forwardSsh_help() {
-    echo "usage: forwardSsh # adds all of your .ssh keys to an ssh-agent for the current shell"
+
+    cat <<EOM
+usage:  forwardSsh
+... adds all of your .ssh keys to an ssh-agent for the current shell
+EOM
+
 }
 function forwardSsh() {
     echo "... generating agent for ssh forwarding in cluster"
@@ -51,8 +65,15 @@ function forwardSsh() {
 }
 
 function addKey_help() {
-    echo "usage: addKey private_ssh_key e.g. addKey id_rsa - adds key to ssh-agent's keyring"
+    cat <<EOM
+usage:  addKey </path/to/private_ssh_key>
+... adds key to ssh-agent's keyring
+e.g.
+    addKey ~/.ssh/id_rsa
+EOM
+
 }
+
 function addKey() {
     key="$1"
     if [[ -r ${key}.pub ]]; then
@@ -64,8 +85,14 @@ function addKey() {
 }
 
 function goCluster_help() {
-    echo "usage: goCluster clusterName e.g. goCluster some_cluster # create ssh agent with keyring"
-	echo "       and ssh to cluster with agent forwarding"
+    cat <<EOM
+usage:  goCluster <clusterName>
+... ssh to clusterName with ssh-agent forwarding your keys
+e.g.
+    goCluster 178.192.1.2
+
+EOM
+
 }
 function goCluster() {
     setClusterName "${1-$clusterName}" || return 1
@@ -75,8 +102,11 @@ function goCluster() {
 }
 
 function setClusterName_help() {
-    echo "usage: setClusterName clusterName e.g setClusterName some_cluster # sets clusterName env var"
-	echo "       ... used by other helper functions to determine cluster"
+    cat <<EOM
+usage: setClusterName clusterName e.g setClusterName some_cluster
+... sets clusterName env var
+... used by other helper functions to determine cluster
+EOM
 }
 function setClusterName() {
     if [[ -z "$1" ]]; then
@@ -91,7 +121,10 @@ function setClusterName() {
 }
 
 function devbox_help() {
-	echo 'usage: devbox <volume map> [<image:-dev_basic>] # drop in to a docker container, with mapped vols'
+    cat <<EOM
+usage: devbox <volume map> [<image:-dev_basic>]
+... drop in to a docker container, with mapped vols.
+EOM
 }
 function devbox() {
     if [[ -z "$1" ]]; then
@@ -115,7 +148,7 @@ function devbox() {
         path="${path%/}"
         project=$(basename $path)
         if [[ ! -d "$path" ]]; then
-            echo "ERROR: path $path must be a directory on the machine" 
+            echo "ERROR: path $path must be a directory on the machine"
             echo 'usage: devbox <hostdir1:hostdir2:...> [<image:-devbox>]'
             echo '... hostdir /this/path/example:/that/path/boo will be mounted under'
             echo '    /example and /boo respectively'
@@ -133,14 +166,27 @@ function devbox() {
 }
 
 export clusterName=
-export PATH=$PATH:$HOME/local/terraform_0.6.14
 
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$')
 do
-# TODO: split help_txt so each line printed via format
-    help_txt=$(${func}_help)
-    printf "%15s () $help_txt\n" $func
+    oIFS=$IFS
+    IFS=$'\n'
+    start_line="${func}()"
+    for line in $(${func}_help); do
+        # ... info lines in cyan 'cos its purrdy Mr. Taggart...
+        if [[ $start_line =~ ^[\ ]$ ]]; then
+            line="\e[2m\e[36m$line\e[0m\e[22m"
+            format_str="%-18s $line\n"
+        else
+        # ... function names in green with emboldened usage info
+            line="\e[1m$line\e[0m"
+            format_str="\e[32m%-18s\e[0m $line\n"
+        fi
+        printf "$format_str" $start_line
+        start_line=' ' # omit function name at start of subsequent lines
+    done
+    IFS=$oIFS
+    echo ""
 done
-
 
