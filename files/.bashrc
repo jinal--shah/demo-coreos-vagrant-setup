@@ -122,47 +122,73 @@ function setClusterName() {
 
 function devbox_help() {
     cat <<EOM
-usage: devbox <volume map> [<image:-dev_basic>]
+usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-dev_basic:0.0.1>]
 ... drop in to a docker container, with mapped vols.
+  - <name>: will be the container name (only [A-Za-z0-9_]+)
+  - <hostdir>: /this/path/example:/that/path/boo will be mounted under
+    /example and /boo respectively. These are also added to \$PATH.
+  - <image>: will use dev_basic:0.0.1 by default.
 EOM
 }
 function devbox() {
     if [[ -z "$1" ]]; then
-        echo 'ERROR: usage: devbox <hostdir1:hostdir2:...> [<image:-dev_basic>]'
-        echo '... hostdir /this/path/example:/that/path/boo will be mounted under'
-        echo '    /example and /boo respectively'
+        echo 'ERROR: you must pass a <name> for the container'
+        devbox_help
         return 1
     fi
 
-    host_dirs="$1"
-    if [[ -z "$2" ]]; then
-        image=dev_basic
-    else
-        image="$2"
+    if [[ $1 =~ [^A-Za-z0-9_] ]];then
+        echo 'ERROR: <name> contains invalid characters.'
+        devbox_help
+        return 1
     fi
 
-    container_path_var='export PATH=$PATH'
-    vol_str=""
-    IFS=':' read -ra paths <<< "$host_dirs"
-    for path in "${paths[@]}"; do
-        path="${path%/}"
-        project=$(basename $path)
-        if [[ ! -d "$path" ]]; then
-            echo "ERROR: path $path must be a directory on the machine"
-            echo 'usage: devbox <hostdir1:hostdir2:...> [<image:-devbox>]'
-            echo '... hostdir /this/path/example:/that/path/boo will be mounted under'
-            echo '    /example and /boo respectively'
-            return 1
-        fi
-        vol_str="$vol_str -v ${path}:/${project}"
-        container_path_var="$container_path_var:/${project}"
-    done
+    container_name="$1"
+    host_dirs="$2"
+    if [[ -z "$3" ]]; then
+        image='dev_basic:0.0.1'
+    else
+        image="$3"
+    fi
 
-    bashrc=$(mktemp)
-    echo -e "$container_path_var\n">$bashrc
-    vol_str="$vol_str -v $bashrc:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
+    # ... if container already exists but not running this will start it.
+    # If it is already running, this will exec to it.
+    docker_exec="docker exec -it $container_name /bin/bash"
 
-    docker run -it $vol_str $image /bin/bash
+    # ... don't use docker ps 'name' filter - that will match substrings too ...
+    if docker ps --format '{{.Names}}' --filter 'status=running' | grep "^$container_name$" >/dev/null 2>&1
+    then
+        echo "... container $container_name already running. Will open a session in the workspace."
+        $docker_exec
+    elif docker ps -a --format '{{.Names}}' | grep "^$container_name$" >/dev/null 2>&1
+    then
+        echo "... container $container_name exists. Will start it and open a session in the workspace."
+        docker start $container_name \
+        && $docker_exec
+    else
+        # ... set up new container instance
+        container_path_var='export PATH=$PATH'
+        vol_str=""
+        IFS=':' read -ra paths <<< "$host_dirs"
+        for path in "${paths[@]}"; do
+            path="${path%/}"
+            project=$(basename $path)
+            if [[ ! -d "$path" ]]; then
+                echo "ERROR: path $path must be a directory on the machine"
+                devbox_help
+                return 1
+            fi
+            vol_str="$vol_str -v ${path}:/${project}"
+            container_path_var="$container_path_var:/${project}"
+        done
+
+        bashrc=$(mktemp)
+        echo -e "$container_path_var\n">$bashrc
+        vol_str="$vol_str -v $bashrc:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
+
+        docker run -it --name $container_name $vol_str $image /bin/bash
+    fi
+
 }
 
 export clusterName=
