@@ -158,11 +158,16 @@ function devbox() {
     # ... don't use docker ps 'name' filter - that will match substrings too ...
     if docker ps --format '{{.Names}}' --filter 'status=running' | grep "^$container_name$" >/dev/null 2>&1
     then
-        echo "... container $container_name already running. Will open a session in the workspace."
+        echo "... container $container_name already running. Will open a session in that workspace."
+        _warn_immutable_container $container_name
+
         $docker_exec
+
     elif docker ps -a --format '{{.Names}}' | grep "^$container_name$" >/dev/null 2>&1
     then
         echo "... container $container_name exists. Will start it and open a session in the workspace."
+        _warn_immutable_container $container_name
+
         docker start $container_name \
         && $docker_exec
     else
@@ -193,11 +198,24 @@ function devbox() {
 
 }
 
+function _warn_immutable_container() {
+    container_name="$1"
+    cat <<EOF
+$(tput bold)$(tput setaf 3)*** WARNING ***
+if you want different hostdirs mounted or a different image
+choose a different name to $container_name, or kill the existing one:
+
+  docker stop $container_name
+  docker rm $container_name
+$(tput sgr0)
+EOF
+}
+
 
 export clusterName=
 
 echo "HELPER SHELL FUNCTIONS: "
-for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$')
+for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$' | grep -v '^_')
 do
     oIFS=$IFS
     IFS=$'\n'
