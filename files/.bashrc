@@ -190,7 +190,7 @@ function devbox() {
         # ... create a .bashrc for the container
         bashrc=$(mktemp)
         echo -e "$container_path_var\n">$bashrc
-        echo -e "export PS1='\\e[32m$container_name\\e[0m \\e[36m\\W\\e[0m $ '\n">>$bashrc
+        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">>$bashrc
         vol_str="$vol_str -v $bashrc:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
 
         docker run -it --name $container_name $vol_str $image /bin/bash
