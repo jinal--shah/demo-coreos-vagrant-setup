@@ -137,7 +137,7 @@ function devbox() {
         return 1
     fi
 
-    if [[ $1 =~ [^A-Za-z0-9_] ]];then
+    if [[ $1 =~ [^-A-Za-z0-9_] ]];then
         echo 'ERROR: <name> contains invalid characters.'
         devbox_help
         return 1
@@ -146,7 +146,7 @@ function devbox() {
     container_name="$1"
     host_dirs="$2"
     if [[ -z "$3" ]]; then
-        image='dev_basic:0.0.1'
+        image='dev_basic:0.0.3'
     else
         image="$3"
     fi
