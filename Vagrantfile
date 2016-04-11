@@ -18,6 +18,7 @@ VM_TMP_DIR = '/var/tmp'
 CLUSTER_SSH_KEY_SRC_DIR = File.join("#{FILES_DIR}", "ssh_keys")
 CLUSTER_SSH_KEY_TMP_DIR = "#{VM_TMP_DIR}/ssh_keys"
 CLUSTER_SSH_KEY_DEST_DIR = "#{VM_HOME_DIR}/.ssh"
+HOME_BIN = "#{VM_HOME_DIR}/local/bin"
 
 # Defaults for config options defined in CONFIG
 $num_instances = 1
@@ -168,14 +169,14 @@ Vagrant.configure("2") do |config|
 
       # ... add a script to help with cleanup of docker artefacts
       if File.exist?("#{FILES_DIR}/docker_cleanup")
-        config.vm.provision :file, :source => "#{FILES_DIR}/docker_cleanup", :destination => "#{VM_TMP_DIR}/local/bin/docker_cleanup", run: 'always'
         config.vm.provision :shell, :inline => "mkdir -p #{VM_HOME_DIR}/local/bin", :privileged => true, run: 'always'
         config.vm.provision :shell, :inline => "rm -f #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :file, :source => "#{FILES_DIR}/docker_cleanup", :destination => "#{VM_TMP_DIR}/docker_cleanup", run: 'always'
 
         # ... account for people with different (i.e. wrong) git core.autocrlf settings
-        config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/docker_cleanup > #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "chown core:core #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "chmod a+x #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/docker_cleanup > #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "chown core:core #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "chmod a+x #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
 
       end
 
