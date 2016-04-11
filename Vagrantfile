@@ -158,10 +158,24 @@ Vagrant.configure("2") do |config|
           s.privileged = true
         end
 
-        # ... account for people with different (i.e. wrong) git core.autocrlf settings
         config.vm.provision :file, :source => "#{FILES_DIR}/.bashrc", :destination => "#{VM_TMP_DIR}/.bashrc", run: 'always'
+
+        # ... account for people with different (i.e. wrong) git core.autocrlf settings
         config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/.bashrc > #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
         config.vm.provision :shell, :inline => "chown core:core #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
+
+      end
+
+      # ... add a script to help with cleanup of docker artefacts
+      if File.exist?("#{FILES_DIR}/docker_cleanup")
+        config.vm.provision :file, :source => "#{FILES_DIR}/docker_cleanup", :destination => "#{VM_TMP_DIR}/local/bin/docker_cleanup", run: 'always'
+        config.vm.provision :shell, :inline => "mkdir -p #{VM_HOME_DIR}/local/bin", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "rm -f #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
+
+        # ... account for people with different (i.e. wrong) git core.autocrlf settings
+        config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/docker_cleanup > #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "chown core:core #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
+        config.vm.provision :shell, :inline => "chmod a+x #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
 
       end
 
