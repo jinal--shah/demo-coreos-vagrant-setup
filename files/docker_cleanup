@@ -1,5 +1,8 @@
 #!/bin/bash
 # vim: et sr ts=4 sw=4 smartindent:
+
+DOCKER_LIB=/var/lib/docker
+
 echo "... cleaning up exited container data"
 containers_exited=$(docker ps -qa -f 'status=exited')
 if [[ ! -z $containers_exited ]]; then
@@ -15,13 +18,20 @@ for image_id in $(docker images -a | grep '^<none>' | awk {'print $3'}); do
     fi
 done
 
+# ... exit unless root as won't have access to $DOCKER_LIB
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   echo "$(tput bold)$(tput setaf 1)Stopping here. Run as root to remove stuff under ${DOCKER_LIB}.$(tput sgr0)"
+   exit 2
+fi
+
 echo "... will look for any image or container data that can't be accounted for."
 docker_image_ids=$(docker images -qa | sort | uniq)
 container_ids=$(docker ps -qa)
 docker_ids=$(echo -e "$docker_image_ids\n$container_ids" | sort | uniq)
 
 es=0
-for dir in /var/lib/docker/{containers,graph,overlay}; do
+for dir in $DOCKER_LIB/{containers,graph,overlay}; do
     echo "... looking in $dir" 
     docker_dirs=$(
         for docker_dir in $(ls -1 $dir | sort | uniq); do

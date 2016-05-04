@@ -15,6 +15,8 @@ fi
 
 . /etc/skel/.bashrc
 
+DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.4
+
 function pointFleet_help() {
 
     cat <<EOM
@@ -122,12 +124,12 @@ function setClusterName() {
 
 function devbox_help() {
     cat <<EOM
-usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-dev_basic:0.0.1>]
+usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-$DEFAULT_DEVBOX_IMAGE>]
 ... drop in to a docker container, with mapped vols.
   - <name>: will be the container name (only [A-Za-z0-9_]+)
   - <hostdir>: /this/path/example:/that/path/boo will be mounted under
     /example and /boo respectively. These are also added to \$PATH.
-  - <image>: will use dev_basic:0.0.1 by default.
+  - <image>: will use $DEFAULT_DEVBOX_IMAGE by default.
 EOM
 }
 function devbox() {
@@ -146,7 +148,7 @@ function devbox() {
     container_name="$1"
     host_dirs="$2"
     if [[ -z "$3" ]]; then
-        image='dev_basic:0.0.3'
+        image=$DEFAULT_DEVBOX_IMAGE
     else
         image="$3"
     fi
@@ -172,29 +174,71 @@ function devbox() {
         && $docker_exec
     else
         # ... set up new container instance
-        container_path_var='export PATH=$PATH'
-        vol_str=""
-        IFS=':' read -ra paths <<< "$host_dirs"
-        for path in "${paths[@]}"; do
-            path="${path%/}"
-            project=$(basename $path)
-            if [[ ! -d "$path" ]]; then
-                echo "ERROR: path $path must be a directory on the machine"
-                devbox_help
-                return 1
-            fi
-            vol_str="$vol_str -v ${path}:/${project}"
-            container_path_var="$container_path_var:/${project}"
-        done
+        validate_paths "$host_dirs" || return 1
 
         # ... create a .bashrc for the container
-        bashrc=$(mktemp)
-        echo -e "$container_path_var\n">$bashrc
-        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">>$bashrc
-        vol_str="$vol_str -v $bashrc:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
+        bashrc_tmp=$(mktemp)
+        make_container_bashrc "$container_name" "$host_dirs" "$bashrc_tmp"
+
+        user_vol_str=$(make_vol_str "$host_dirs")
+        vol_str="$user_vol_str -v $bashrc_tmp:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
 
         docker run -it --name $container_name $vol_str $image /bin/bash
     fi
+
+}
+
+function validate_paths() {
+    host_dirs="$1"
+    IFS=':' read -ra paths <<< "$host_dirs"
+    for path in "${paths[@]}"; do
+        path="${path%/}"
+        if [[ ! -d "$path" ]]; then
+            echo "ERROR: path $path must be a directory on the machine"
+            devbox_help
+            return 1
+        fi
+    done
+}
+
+function make_vol_str() {
+    host_dirs="$1"
+    vol_str=""
+    IFS=':' read -ra paths <<< "$host_dirs"
+    for path in "${paths[@]}"; do
+        path="${path%/}"
+        project=$(basename $path)
+        vol_str="$vol_str -v ${path}:/${project}"
+    done
+    echo "$vol_str"
+}
+
+function make_container_path_var() {
+    container_name="$1"
+    host_dirs="$2"
+    bashrc_tmp="$3"
+
+    container_path_var='export PATH=$PATH'
+    IFS=':' read -ra paths <<< "$host_dirs"
+    for path in "${paths[@]}"; do
+        path="${path%/}"
+        project=$(basename $path)
+        container_path_var="$container_path_var:/${project}"
+    done
+    echo "$container_path_var"
+
+}
+
+function make_container_bashrc() {
+    container_name="$1"
+    host_dirs="$2"
+    bashrc_tmp="$3"
+
+    container_path_var=$(make_container_path_var "$container_name" "$host_dirs" "$bashrc_tmp")
+    cat <<EOF >$bashrc_tmp
+$container_path_var
+export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'
+EOF
 
 }
 
@@ -214,6 +258,7 @@ EOF
 
 export clusterName=
 export PATH=$PATH:$HOME/local/bin
+alias dgc="sudo $(which docker_cleanup)"
 
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$' | grep -v '^_')
