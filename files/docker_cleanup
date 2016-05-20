@@ -1,0 +1,56 @@
+#!/bin/bash
+# vim: et sr ts=4 sw=4 smartindent:
+
+DOCKER_LIB=/var/lib/docker
+
+echo "... cleaning up exited container data"
+containers_exited=$(docker ps -qa -f 'status=exited')
+if [[ ! -z $containers_exited ]]; then
+    echo "... removing container data (plus any docker vols):"
+    echo "    $containers_exited"
+    docker rm -v $containers_exited
+fi
+echo "... cleaning up untagged, orphaned image layer data"
+for image_id in $(docker images -a | grep '^<none>' | awk {'print $3'}); do
+    if docker rmi $image_id 2>/dev/null
+    then
+        echo "... removing image $image_id"
+    fi
+done
+
+# ... exit unless root as won't have access to $DOCKER_LIB
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   echo "$(tput bold)$(tput setaf 1)Stopping here. Run as root to remove stuff under ${DOCKER_LIB}.$(tput sgr0)"
+   exit 2
+fi
+
+echo "... will look for any image or container data that can't be accounted for."
+docker_image_ids=$(docker images -qa | sort | uniq)
+container_ids=$(docker ps -qa)
+docker_ids=$(echo -e "$docker_image_ids\n$container_ids" | sort | uniq)
+
+es=0
+for dir in $DOCKER_LIB/{containers,graph,overlay}; do
+    echo "... looking in $dir" 
+    docker_dirs=$(
+        for docker_dir in $(ls -1 $dir | sort | uniq); do
+            if [[ ${#docker_dir} -eq 64 ]] && [[ $docker_dir =~ ^[a-z0-9]+$ ]]; then
+                echo ${docker_dir:0:12}
+            fi
+        done
+    )
+    if [[ ! -z $docker_dirs ]]; then
+        not_known_ids=$(comm -23 <(echo "$docker_dirs") <(echo "$docker_ids"))
+        if [[ ! -z $not_known_ids ]]; then
+            echo "The following dirs exist under $dir, but are not an image or container id:"
+            echo "$not_known_ids"
+            es=1
+        else
+            echo "$(tput bold)$(tput setaf 2)[OK]$(tput sgr0) nothing unexpected found."
+        fi
+    fi
+done
+
+exit $es
+

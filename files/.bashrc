@@ -15,6 +15,8 @@ fi
 
 . /etc/skel/.bashrc
 
+DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.6
+
 function pointFleet_help() {
 
     cat <<EOM
@@ -122,12 +124,12 @@ function setClusterName() {
 
 function devbox_help() {
     cat <<EOM
-usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-dev_basic:0.0.1>]
+usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-$DEFAULT_DEVBOX_IMAGE>]
 ... drop in to a docker container, with mapped vols.
   - <name>: will be the container name (only [A-Za-z0-9_]+)
   - <hostdir>: /this/path/example:/that/path/boo will be mounted under
     /example and /boo respectively. These are also added to \$PATH.
-  - <image>: will use dev_basic:0.0.1 by default.
+  - <image>: will use $DEFAULT_DEVBOX_IMAGE by default.
 EOM
 }
 function devbox() {
@@ -146,7 +148,7 @@ function devbox() {
     container_name="$1"
     host_dirs="$2"
     if [[ -z "$3" ]]; then
-        image='dev_basic:0.0.3'
+        image=$DEFAULT_DEVBOX_IMAGE
     else
         image="$3"
     fi
@@ -188,10 +190,12 @@ function devbox() {
         done
 
         # ... create a .bashrc for the container
-        bashrc=$(mktemp)
-        echo -e "$container_path_var\n">$bashrc
-        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">>$bashrc
-        vol_str="$vol_str -v $bashrc:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
+        profiles=$(mktemp -d -p /home/core/profile.d/)
+        echo "should write to $profiles"
+        echo -e "$container_path_var\n">$profiles/path.sh
+        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">$profiles/bash_prompt.sh
+        echo -e "export CONTAINER_NAME=$container_name\\n">$profiles/container_name.sh
+        vol_str="$vol_str -v $profiles:/etc/profile.d" 
 
         docker run -it --name $container_name $vol_str $image /bin/bash
     fi
@@ -213,6 +217,8 @@ EOF
 
 
 export clusterName=
+export PATH=$PATH:$HOME/local/bin
+alias dgc="sudo $(which docker_cleanup)"
 
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$' | grep -v '^_')
