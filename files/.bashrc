@@ -191,7 +191,7 @@ function devbox() {
 
         # ... create a .bashrc for the container
         profiles=$(mktemp -d -p /home/core/profile.d/)
-        echo "should write to $profiles"
+        echo "... will write additional scripts to source during login to $profiles"
         echo -e "$container_path_var\n">$profiles/path.sh
         echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">$profiles/bash_prompt.sh
         echo -e "export CONTAINER_NAME=$container_name\\n">$profiles/container_name.sh
