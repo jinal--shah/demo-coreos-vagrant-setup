@@ -15,7 +15,7 @@ fi
 
 . /etc/skel/.bashrc
 
-DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.4
+DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.6
 
 function pointFleet_help() {
 
@@ -174,71 +174,31 @@ function devbox() {
         && $docker_exec
     else
         # ... set up new container instance
-        validate_paths "$host_dirs" || return 1
+        container_path_var='export PATH=$PATH'
+        vol_str=""
+        IFS=':' read -ra paths <<< "$host_dirs"
+        for path in "${paths[@]}"; do
+            path="${path%/}"
+            project=$(basename $path)
+            if [[ ! -d "$path" ]]; then
+                echo "ERROR: path $path must be a directory on the machine"
+                devbox_help
+                return 1
+            fi
+            vol_str="$vol_str -v ${path}:/${project}"
+            container_path_var="$container_path_var:/${project}"
+        done
 
         # ... create a .bashrc for the container
-        bashrc_tmp=$(mktemp)
-        make_container_bashrc "$container_name" "$host_dirs" "$bashrc_tmp"
-
-        user_vol_str=$(make_vol_str "$host_dirs")
-        vol_str="$user_vol_str -v $bashrc_tmp:/root/.bashrc:ro -v $HOME/.bash_history:/root/.bash_history"
+        profiles=$(mktemp -d -p /home/core/profile.d/)
+        echo "should write to $profiles"
+        echo -e "$container_path_var\n">$profiles/path.sh
+        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">$profiles/bash_prompt.sh
+        echo -e "export CONTAINER_NAME=$container_name\\n">$profiles/container_name.sh
+        vol_str="$vol_str -v $profiles:/etc/profile.d" 
 
         docker run -it --name $container_name $vol_str $image /bin/bash
     fi
-
-}
-
-function validate_paths() {
-    host_dirs="$1"
-    IFS=':' read -ra paths <<< "$host_dirs"
-    for path in "${paths[@]}"; do
-        path="${path%/}"
-        if [[ ! -d "$path" ]]; then
-            echo "ERROR: path $path must be a directory on the machine"
-            devbox_help
-            return 1
-        fi
-    done
-}
-
-function make_vol_str() {
-    host_dirs="$1"
-    vol_str=""
-    IFS=':' read -ra paths <<< "$host_dirs"
-    for path in "${paths[@]}"; do
-        path="${path%/}"
-        project=$(basename $path)
-        vol_str="$vol_str -v ${path}:/${project}"
-    done
-    echo "$vol_str"
-}
-
-function make_container_path_var() {
-    container_name="$1"
-    host_dirs="$2"
-    bashrc_tmp="$3"
-
-    container_path_var='export PATH=$PATH'
-    IFS=':' read -ra paths <<< "$host_dirs"
-    for path in "${paths[@]}"; do
-        path="${path%/}"
-        project=$(basename $path)
-        container_path_var="$container_path_var:/${project}"
-    done
-    echo "$container_path_var"
-
-}
-
-function make_container_bashrc() {
-    container_name="$1"
-    host_dirs="$2"
-    bashrc_tmp="$3"
-
-    container_path_var=$(make_container_path_var "$container_name" "$host_dirs" "$bashrc_tmp")
-    cat <<EOF >$bashrc_tmp
-$container_path_var
-export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'
-EOF
 
 }
 
