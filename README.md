@@ -59,10 +59,4 @@ This drops the user in to a docker container with user-defined volumes mapped fr
 
 Vagrant will change these files on a `vagrant up` run.
 
-You won't want to commit those changes. Ignore them like this:
-
-```shell
-    # ... ensure git-add will ignore changes to these files
-    git update-index --assume-unchanged config.rb
-    git update-index --assume-unchanged user-data
-```
+You won't want to commit those changes. These files are gitignored by default.
