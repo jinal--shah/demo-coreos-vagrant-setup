@@ -1,6 +1,7 @@
 .vagrant/
 log/
 files/ssh_keys/*
+files/.aws/c*
 **/*.swp
 !**/*.md
 config.rb

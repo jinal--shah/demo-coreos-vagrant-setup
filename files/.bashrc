@@ -15,7 +15,7 @@ fi
 
 . /etc/skel/.bashrc
 
-DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.6
+DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.1
 
 function pointFleet_help() {
 
@@ -78,12 +78,8 @@ EOM
 
 function addKey() {
     key="$1"
-    if [[ -r ${key}.pub ]]; then
-        echo "... adding key $key"
-        ssh-add $key
-    else
-        echo "... no public key found for $key. Will skip ..."
-    fi
+    echo "... adding key $key"
+    ssh-add $key
 }
 
 function goCluster_help() {
@@ -190,14 +186,24 @@ function devbox() {
         done
 
         # ... create a .bashrc for the container
+        mkdir -p /home/core/profile.d
         profiles=$(mktemp -d -p /home/core/profile.d/)
         echo "... will write additional scripts to source during login to $profiles"
         echo -e "$container_path_var\n">$profiles/path.sh
         echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">$profiles/bash_prompt.sh
         echo -e "export CONTAINER_NAME=$container_name\\n">$profiles/container_name.sh
-        vol_str="$vol_str -v $profiles:/etc/profile.d" 
+        vol_str="
+            $vol_str
+            -v $profiles:/etc/profile.d
+            -v /var/run/docker.sock:/var/run/docker.sock
+            -v /home/core/.ssh:/home/core/.ssh:ro
+            -v /home/core/.aws:/home/core/.aws:ro
+            -v /home/core/.ssh:/root/.ssh:ro
+        "
 
-        docker run -it --name $container_name $vol_str $image /bin/bash
+        docker run -it --name $container_name $vol_str --user core $image /bin/bash
+
+
     fi
 
 }

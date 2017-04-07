@@ -1,5 +1,5 @@
 # -*- mode: ruby -*-
-# # vi: set ft=ruby :
+# vim: set ft=ruby et sw=2 ts=2 sr smartindent:
 
 require 'fileutils'
 
@@ -140,7 +140,7 @@ Vagrant.configure("2") do |config|
       #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => ['nolock,vers=3,udp']
       $shared_folders.each_with_index do |(host_folder, guest_folder), index|
         config.vm.synced_folder host_folder.to_s, guest_folder.to_s, id: "core-share%02d" % index, type: "rsync",
-	  rsync__verbose: true
+          rsync__verbose: true
       end
 
       if $share_home
@@ -164,6 +164,18 @@ Vagrant.configure("2") do |config|
         # ... account for people with different (i.e. wrong) git core.autocrlf settings
         config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/.bashrc > #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
         config.vm.provision :shell, :inline => "chown core:core #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
+
+      end
+
+      # ... if files/.aws creds dir, ship them to vm
+      if Dir.exist?("#{FILES_DIR}/.aws")
+        config.vm.provision "shell", run: "always" do |s|
+          s.inline = "rm -rf #{VM_HOME_DIR}/.aws"
+          s.privileged = true
+        end
+
+        config.vm.provision :file, :source => "#{FILES_DIR}/.aws", :destination => "#{VM_HOME_DIR}/.aws", run: 'always'
+        config.vm.provision :shell, :inline => "chown -R core:core #{VM_HOME_DIR}/.aws", :privileged => true, run: 'always'
 
       end
 
