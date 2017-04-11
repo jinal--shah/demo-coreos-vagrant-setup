@@ -121,7 +121,7 @@ function setClusterName() {
 
 function devbox_help() {
     cat <<EOM
-usage: devbox <name> [<hostdir1:hostdir2:...>] [[<user>@]<image:-$DEFAULT_DEVBOX_IMAGE>]
+usage: devbox <name> [<hostdir1:hostdir2:...>] [[<user:-$DEFAULT_DEVBOX_USER>@]<image:-$DEFAULT_DEVBOX_IMAGE>]
 ... drop in to a docker container, with mapped vols.
   - <name>: will be the container name (only [A-Za-z0-9_]+)
   - <hostdir>: /this/path/example:/that/path/boo will be mounted under
