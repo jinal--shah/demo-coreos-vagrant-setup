@@ -15,7 +15,8 @@ fi
 
 . /etc/skel/.bashrc
 
-DEFAULT_DEVBOX_IMAGE=dev_basic:0.0.1
+DEFAULT_DEVBOX_IMAGE=opsgang/devbox_aws:stable
+DEFAULT_DEVBOX_USER=root
 
 function pointFleet_help() {
 
@@ -120,11 +121,13 @@ function setClusterName() {
 
 function devbox_help() {
     cat <<EOM
-usage: devbox <name> [<hostdir1:hostdir2:...>] [<image:-$DEFAULT_DEVBOX_IMAGE>]
+usage: devbox <name> [<hostdir1:hostdir2:...>] [[<user>@]<image:-$DEFAULT_DEVBOX_IMAGE>]
 ... drop in to a docker container, with mapped vols.
   - <name>: will be the container name (only [A-Za-z0-9_]+)
   - <hostdir>: /this/path/example:/that/path/boo will be mounted under
     /example and /boo respectively. These are also added to \$PATH.
+  - optionally specify user to run as (must already exist in container)
+    (if you specify user, you must add the @ to the end)
   - <image>: will use $DEFAULT_DEVBOX_IMAGE by default.
 EOM
 }
@@ -143,11 +146,20 @@ function devbox() {
 
     container_name="$1"
     host_dirs="$2"
-    if [[ -z "$3" ]]; then
-        image=$DEFAULT_DEVBOX_IMAGE
-    else
-        image="$3"
+    local user=$DEFAULT_DEVBOX_USER
+    local image=$DEFAULT_DEVBOX_IMAGE
+    if [[ ! -z "$3" ]]; then
+        IFS=@ read a b <<< "$3" 
+        if [[ -z "$b" ]]; then
+            image="$a"
+        else
+            user="$a"
+            image="$b"
+        fi
     fi
+
+    local home=/root
+    [[ "$user" != "root" ]] && home=/home/$user
 
     # ... if container already exists but not running this will start it.
     # If it is already running, this will exec to it.
@@ -196,13 +208,15 @@ function devbox() {
             $vol_str
             -v $profiles:/etc/profile.d
             -v /var/run/docker.sock:/var/run/docker.sock
-            -v /home/core/.ssh:/home/core/.ssh:ro
-            -v /home/core/.aws:/home/core/.aws:ro
             -v /home/core/.ssh:/root/.ssh:ro
+            -v /home/core/.aws:/root/.aws:ro
         "
 
-        docker run -it --name $container_name $vol_str --user core $image /bin/bash
+        if [[ "$user" != "root" ]]; then
+            vol_str="$vol_str -v /home/core/.aws:$home/.aws:ro -v /home/core/.ssh:$home/.ssh"
+        fi
 
+        docker run -it --name $container_name --user $user $vol_str $image /bin/bash
 
     fi
 
