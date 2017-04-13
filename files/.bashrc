@@ -208,7 +208,7 @@ function devbox() {
             $vol_str
             -v $profiles:/etc/profile.d
             -v /var/run/docker.sock:/var/run/docker.sock
-            -v /home/core/.ssh:/root/.ssh:ro
+            -v /home/core/.ssh:/etc/skel/.ssh:ro
             -v /home/core/.aws:/root/.aws:ro
         "
 
