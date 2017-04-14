@@ -1,5 +1,8 @@
 .vagrant/
 log/
+**/.ssh
+**/.aws
+**/.gitconfig
 files/ssh_keys/*
 files/.aws/c*
 **/*.swp
