@@ -131,96 +131,74 @@ usage: devbox <name> [<hostdir1:hostdir2:...>] [[<user:-$DEFAULT_DEVBOX_USER>@]<
   - <image>: will use $DEFAULT_DEVBOX_IMAGE by default.
 EOM
 }
-function devbox() {
+
+devbox ()
+{
     if [[ -z "$1" ]]; then
-        echo 'ERROR: you must pass a <name> for the container'
-        devbox_help
-        return 1
-    fi
-
-    if [[ $1 =~ [^-A-Za-z0-9_] ]];then
-        echo 'ERROR: <name> contains invalid characters.'
-        devbox_help
-        return 1
-    fi
-
-    container_name="$1"
-    host_dirs="$2"
-    local user=$DEFAULT_DEVBOX_USER
-    local image=$DEFAULT_DEVBOX_IMAGE
+        echo 'ERROR: you must pass a <name> for the container';
+        devbox_help;
+        return 1;
+    fi;
+    if [[ $1 =~ [^-A-Za-z0-9_] ]]; then
+        echo 'ERROR: <name> contains invalid characters.';
+        devbox_help;
+        return 1;
+    fi;
+    container_name="$1";
+    host_dirs="$2";
+    local user=$DEFAULT_DEVBOX_USER;
+    local image=$DEFAULT_DEVBOX_IMAGE;
     if [[ ! -z "$3" ]]; then
-        IFS=@ read a b <<< "$3" 
+        IFS=@ read a b <<< "$3";
         if [[ -z "$b" ]]; then
-            image="$a"
+            image="$a";
         else
-            user="$a"
-            image="$b"
-        fi
-    fi
-
-    local home=/root
-    [[ "$user" != "root" ]] && home=/home/$user
-
-    # ... if container already exists but not running this will start it.
-    # If it is already running, this will exec to it.
-    docker_exec="docker exec -it $container_name /bin/bash"
-
-    # ... don't use docker ps 'name' filter - that will match substrings too ...
-    if docker ps --format '{{.Names}}' --filter 'status=running' | grep "^$container_name$" >/dev/null 2>&1
-    then
-        echo "... container $container_name already running. Will open a session in that workspace."
-        _warn_immutable_container $container_name
-
-        $docker_exec
-
-    elif docker ps -a --format '{{.Names}}' | grep "^$container_name$" >/dev/null 2>&1
-    then
-        echo "... container $container_name exists. Will start it and open a session in the workspace."
-        _warn_immutable_container $container_name
-
-        docker start $container_name \
-        && $docker_exec
+            user="$a";
+            image="$b";
+        fi;
+    fi;
+    local home=/root;
+    [[ "$user" != "root" ]] && home=/home/$user;
+    docker_exec="docker exec -it $container_name /bin/bash";
+    if docker ps --format '{{.Names}}' --filter 'status=running' | grep --colour=auto "^$container_name$" > /dev/null 2>&1; then
+        echo "... container $container_name already running. Will open a session in that workspace.";
+        _warn_immutable_container $container_name;
+        $docker_exec;
     else
-        # ... set up new container instance
-        container_path_var='export PATH=$PATH'
-        vol_str=""
-        IFS=':' read -ra paths <<< "$host_dirs"
-        for path in "${paths[@]}"; do
-            path="${path%/}"
-            project=$(basename $path)
-            if [[ ! -d "$path" ]]; then
-                echo "ERROR: path $path must be a directory on the machine"
-                devbox_help
-                return 1
-            fi
-            vol_str="$vol_str -v ${path}:/${project}"
-            container_path_var="$container_path_var:/${project}"
-        done
+        if docker ps -a --format '{{.Names}}' | grep --colour=auto "^$container_name$" > /dev/null 2>&1; then
+            echo "... container $container_name exists. Will start it and open a session in the workspace.";
+            _warn_immutable_container $container_name;
+            docker start $container_name && $docker_exec;
+        else
+            vol_str="";
+            IFS=':' read -ra paths <<< "$host_dirs";
+            for path in "${paths[@]}";
+            do
+                path="${path%/}";
+                project=$(basename $path);
+                if [[ ! -d "$path" ]]; then
+                    echo "ERROR: path $path must be a directory on the machine";
+                    devbox_help;
+                    return 1;
+                fi;
+                vol_str="$vol_str -v ${path}:/${project}";
+            done;
 
-        # ... create a .bashrc for the container
-        mkdir -p /home/core/profile.d
-        profiles=$(mktemp -d -p /home/core/profile.d/)
-        echo "... will write additional scripts to source during login to $profiles"
-        echo -e "$container_path_var\n">$profiles/path.sh
-        echo -e "export PS1='\\[\\033[01;32m\\]$container_name \\[\\033[01;36m\\]\\W$ \\[\\033[00m\\]'\\n">$profiles/bash_prompt.sh
-        echo -e "export CONTAINER_NAME=$container_name\\n">$profiles/container_name.sh
-        vol_str="
-            $vol_str
-            -v $profiles:/etc/profile.d
-            -v /var/run/docker.sock:/var/run/docker.sock
-            -v /home/core/.ssh:/etc/skel/.ssh:ro
-            -v /home/core/.aws:/root/.aws:ro
-        "
+            # ... use host's docker daemon when using docker in devbox
+            vol_str="$vol_str -v /var/run/docker.sock:/var/run/docker.sock";
 
-        if [[ "$user" != "root" ]]; then
-            vol_str="$vol_str -v /home/core/.aws:$home/.aws:ro -v /home/core/.ssh:$home/.ssh"
-        fi
-
-        docker run -it --name $container_name --user $user $vol_str $image /bin/bash
-
+            # ... make my personal cfg available to container users on login
+            for f in .gitconfig .ssh .aws;
+            do
+                if [[ -r ~/$f ]]; then
+                    vol_str="$vol_str -v $(realpath ~/$f):/etc/skel/$f:ro";
+                fi;
+            done;
+            docker run -it --name $container_name --user $user --hostname $container_name $vol_str $image /bin/bash;
+        fi;
     fi
-
 }
+
 
 function _warn_immutable_container() {
     container_name="$1"
