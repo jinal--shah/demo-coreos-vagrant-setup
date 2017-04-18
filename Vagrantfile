@@ -156,7 +156,7 @@ Vagrant.configure("2") do |config|
 
         config.vm.provision "shell", run: "always" do |s|
           s.path = File.join("#{SCRIPTS_DIR}", "homedir.sh")
-          s.args = ["#{VM_USER}", "#{VM_TMP_DIR}", "#{VM_HOME_DIR}"]
+          s.args = ["#{VM_USER}", "#{VM_TMP_DIR}/homedir", "#{VM_HOME_DIR}"]
           s.privileged = true
         end
 
