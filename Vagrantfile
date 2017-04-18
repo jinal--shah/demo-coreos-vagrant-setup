@@ -8,16 +8,12 @@ Vagrant.require_version ">= 1.6.0"
 CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
 CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 
-# Set OVERWRITE_SSH_KEYS to non-empty if you want to overwrite ssh keys on your VM
-# with filenames the same as in your local ssh_keys dir
-OVERWRITE_SSH_KEYS = ''
-VM_HOME_DIR = '/home/core'
+VM_USER= "core"
+VM_HOME_DIR = "/home/#{VM_USER}"
+VM_TMP_DIR = '/var/tmp'
 SCRIPTS_DIR = File.join(File.dirname(__FILE__), "scripts")
 FILES_DIR = File.join(File.dirname(__FILE__), "files")
-VM_TMP_DIR = '/var/tmp'
-CLUSTER_SSH_KEY_SRC_DIR = File.join("#{FILES_DIR}", "ssh_keys")
-CLUSTER_SSH_KEY_TMP_DIR = "#{VM_TMP_DIR}/ssh_keys"
-CLUSTER_SSH_KEY_DEST_DIR = "#{VM_HOME_DIR}/.ssh"
+SRC_HOME_DIR="#{FILES_DIR}/homedir"
 HOME_BIN = "#{VM_HOME_DIR}/local/bin"
 
 # Defaults for config options defined in CONFIG
@@ -152,57 +148,18 @@ Vagrant.configure("2") do |config|
         config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
       end
 
-      # ... add a bashrc with useful cluster management shell functions
-      if File.exist?("#{FILES_DIR}/.bashrc")
+      # ... if files/homedir/ - ship over to tmp dir (first deleting pre-existing in tmp dir if any)
+      if Dir.exist?("#{SRC_HOME_DIR}")
+        config.vm.provision :shell, :inline => "rm -rf #{VM_TMP_DIR}/homedir || true", :privileged => true, run: 'always'
+        config.vm.provision :file, :source => "#{SRC_HOME_DIR}", :destination => "#{VM_TMP_DIR}/homedir", run: 'always'
+        config.vm.provision :shell, :inline => "chown -R core:core #{VM_TMP_DIR}/homedir", :privileged => true, run: 'always'
+
         config.vm.provision "shell", run: "always" do |s|
-          s.inline = "rm -f #{VM_HOME_DIR}/.bashrc"
+          s.path = File.join("#{SCRIPTS_DIR}", "homedir.sh")
+          s.args = ["#{VM_USER}", "#{VM_TMP_DIR}", "#{VM_HOME_DIR}"]
           s.privileged = true
         end
 
-        config.vm.provision :file, :source => "#{FILES_DIR}/.bashrc", :destination => "#{VM_TMP_DIR}/.bashrc", run: 'always'
-
-        # ... account for people with different (i.e. wrong) git core.autocrlf settings
-        config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/.bashrc > #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "chown core:core #{VM_HOME_DIR}/.bashrc", :privileged => true, run: 'always'
-
-      end
-
-      # ... if files/.aws creds dir, ship them to vm
-      if Dir.exist?("#{FILES_DIR}/.aws")
-        config.vm.provision "shell", run: "always" do |s|
-          s.inline = "rm -rf #{VM_HOME_DIR}/.aws"
-          s.privileged = true
-        end
-
-        config.vm.provision :file, :source => "#{FILES_DIR}/.aws", :destination => "#{VM_HOME_DIR}/.aws", run: 'always'
-        config.vm.provision :shell, :inline => "chown -R core:core #{VM_HOME_DIR}/.aws", :privileged => true, run: 'always'
-
-      end
-
-      # ... add a script to help with cleanup of docker artefacts
-      if File.exist?("#{FILES_DIR}/docker_cleanup")
-        config.vm.provision :shell, :inline => "mkdir -p #{VM_HOME_DIR}/local/bin", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "rm -f #{VM_HOME_DIR}/local/bin/docker_cleanup", :privileged => true, run: 'always'
-        config.vm.provision :file, :source => "#{FILES_DIR}/docker_cleanup", :destination => "#{VM_TMP_DIR}/docker_cleanup", run: 'always'
-
-        # ... account for people with different (i.e. wrong) git core.autocrlf settings
-        config.vm.provision :shell, :inline => "tr -d '\\r' < #{VM_TMP_DIR}/docker_cleanup > #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "chown core:core #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
-        config.vm.provision :shell, :inline => "chmod a+x #{HOME_BIN}/docker_cleanup", :privileged => true, run: 'always'
-
-      end
-
-      # ... add personal .ssh keys for cluster management
-      if Dir.exist?(CLUSTER_SSH_KEY_SRC_DIR)
-        config.vm.provision "shell", run: "always",
-          inline: "rm -rf #{CLUSTER_SSH_KEY_TMP_DIR}"
-
-        config.vm.provision :file, :source => "#{CLUSTER_SSH_KEY_SRC_DIR}", :destination => "#{CLUSTER_SSH_KEY_TMP_DIR}", run: 'always'
-
-        config.vm.provision "shell", run: "always" do |s|
-          s.path = File.join("#{SCRIPTS_DIR}", "ssh_keys.sh")
-          s.args = ["#{CLUSTER_SSH_KEY_TMP_DIR}", "#{CLUSTER_SSH_KEY_DEST_DIR}", "#{OVERWRITE_SSH_KEYS}"]
-        end
       end
 
     end
