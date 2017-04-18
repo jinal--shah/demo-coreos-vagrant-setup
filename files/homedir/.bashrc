@@ -216,7 +216,6 @@ EOF
 
 export clusterName=
 export PATH=$PATH:$HOME/local/bin
-alias dgc="sudo $(which docker_cleanup)"
 
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$' | grep -v '^_')
