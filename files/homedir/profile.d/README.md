@@ -20,7 +20,6 @@ so they run in the desired order.
 
         devbox_build() {
 
-            DI=jinal--shah/devbox_aws_coreos:candidate
             if docker images --format '{{.Repository}}:{{.Tag}}' | grep "^$DI" >/dev/null 2>&1
             then
                 echo "... found image $DI"
@@ -37,11 +36,13 @@ so they run in the desired order.
 
                 [[ $? -ne 0 ]] && echo "ERROR: failed to build $DI" && return 1
 
-                export DEFAULT_DEVBOX_IMAGE=$DI
-                export DEFAULT_DEVBOX_USER="core"
-
             fi
         }
 
-        devbox_build
+        DI=jinal--shah/devbox_aws_coreos:candidate
+        export DEFAULT_DEVBOX_IMAGE=$DI
+        export DEFAULT_DEVBOX_USER="core"
+
+        devbox_build || return 1
+        unset DI
 
