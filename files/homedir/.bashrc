@@ -218,7 +218,7 @@ export clusterName=
 export PATH=$PATH:$HOME/bin
 
 if [[ -d $HOME/profile.d ]]; then
-    for f in $HOME/profile.d/*; do
+    for f in $HOME/profile.d/*.sh; do
         [[ -f $f ]] && echo "... sourcing $f" && . $f
         [[ $? -ne 0 ]] && echo "ERROR: ... could not source $f"
     done

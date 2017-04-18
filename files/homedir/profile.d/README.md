@@ -9,6 +9,8 @@ If you split stuff in to multiple files, and order of
 sourcing matters, then prefix the file names with numbers
 so they run in the desired order.
 
+**Files under profile.d to be sourced must be suffixed .sh**
+
 # EXAMPLE - build a missing docker image on login.
 
 # drop this file in to your files/homedir/profile.d dir
