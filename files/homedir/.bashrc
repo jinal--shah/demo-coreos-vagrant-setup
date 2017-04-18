@@ -215,7 +215,14 @@ EOF
 
 
 export clusterName=
-export PATH=$PATH:$HOME/local/bin
+export PATH=$PATH:$HOME/bin
+
+if [[ -d $HOME/profile.d ]]; then
+    for f in $HOME/profile.d/*; do
+        [[ -f $f ]] && echo "... sourcing $f" && . $f
+        [[ $? -ne 0 ]] && echo "ERROR: ... could not source $f"
+    done
+fi
 
 echo "HELPER SHELL FUNCTIONS: "
 for func in $(set | grep ' ()' | awk {'print $1'} | grep -v '_help$' | grep -v '^_')

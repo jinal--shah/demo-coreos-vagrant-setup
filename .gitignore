@@ -3,8 +3,9 @@ log/
 **/.ssh
 **/.aws
 **/.gitconfig
-files/ssh_keys/*
 files/.aws/c*
+!files/homedir/profile.d/README.md
+files/homedir/profile.d/*
 **/*.swp
 !**/*.md
 config.rb
