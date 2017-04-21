@@ -196,6 +196,14 @@ devbox ()
                     vol_str="$vol_str -v $(realpath ~/$f):/etc/skel/$f:ro";
                 fi;
             done;
+
+            # If personal .devbox.profile.d scripts provided
+            # these are mounted under /etc/profile.d in the host container.
+            # Any files ending .sh will be sourced when logging in as a user.
+            if [[ -r ~/.devbox.profile.d ]]; then
+                vol_str="$vol_str -v $(realpath ~/.devbox.profile.d):/etc/profile.d"
+            fi
+
             docker run -it --name $container_name --user $user --hostname $container_name $vol_str $image /bin/bash;
         fi;
     fi

@@ -5,7 +5,9 @@ log/
 **/.gitconfig
 files/.aws/c*
 !files/homedir/profile.d/README.md
+!files/homedir/.devbox.profile.d/README.md
 files/homedir/profile.d/*
+files/homedir/.devbox.profile.d/*
 **/*.swp
 !**/*.md
 config.rb
