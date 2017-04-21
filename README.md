@@ -1,62 +1,38 @@
 # EXAMPLES: vagrant + coreos for dev workspaces
+[1]: https://github.com/opsgang/docker_devbox_aws "devbox workspace container with aws tools"
+[2]: https://github.com/jinal--shah/devbox_aws_coreos "devbox workspace container for engineers working with coreos in aws"
 
 __The base vagrant / coreos parts of this repo are shamelessly ripped from the__
 __far superior [coreos-vagrant](https://github.com/coreos/coreos-vagrant/) repo__ 
 
 ## Why?
 
-_Full Disclosure: I love [coreos](https://coreos.com/using-coreos/). If coreos was a person, I'd be arrested for stalking ..._
+Working with applications running on coreos, it can be useful to run your own
+local instance for emulating issues or developing automation for it.
 
-... However getting dev teams up to speed on using it and containers generally can sometimes be
-, um, _time consuming_, particularly when not everyone is running \*nix.
+### Customised homedir assets / login config
 
-## What?
+This variation of the official repo lets you configure the core user's home dir as you'd like.
+So you can drop your own .aws dir, .ssh, .gitconfig or profile.d scripts without mounting
+from your host to theh VM.
 
-I use this repo to demonstrate how to
-* customise the [coreos-vagrant](https://github.com/coreos/coreos-vagrant/) project to handle
-  * users with different git core.autocrlf settings on different o/s
-  * automated distribution of personal ssh keys, 
-  * example functions to make fleet cluster navigation easier
-* automate creation of ephemeral [Docker](https://www.docker.com/what-docker) 'workspaces'
-  with volumes shared from the coreos host (and synced with folders on their physical workstation)
+It will also handle files in the homedir with Windows line-endings correctly.
 
-This is not a fork, only a limited use-case example.
-
-## _What did you do?_
-
-
-Vagrantfile is modified so I can demo the following:
-
-### ssh_keys
-
-Put your cluster adm ssh public and private keys in here (and any others you wish
-to use to access this coreos VM as well).
-
-
-### cluster adm helper functions
-
-Your .bashrc will get replaced by files/.bashrc.
-
-This provides a few useful shortcut functions, to help navigate the different clusters.
-
-### development workspaces
-
-There is a simple example of a docker file that provides an ephemeral workspace. You are expected
-to use `docker -v /some/projectdir/on/coreos:/projectdir` to make your src (or other tools) available
-and persist longer than the docker container.
+### devbox workspaces
 
 There is a shell helper function `devbox` as part of the deployed [.bashrc](files/.bashrc).
 This drops the user in to a docker container with user-defined volumes mapped from the coreos host.
 
-## See Also
+See the [devbox\_aws] [1] and my derived [devbox\_aws\_coreos] [2] containers for more information
 
-* [automating distribution of ssh keys](files/ssh_keys/README.ssh_keys.md)
-* [example helper functions for cluster navigation](files/.bashrc)
-* [example Dockerfile for a basic workspace](files/builds/docker/images/dev_basic/Dockerfile)
-* [useful info for vagrant shared/synced folders on Windows](README.windows-shared-folders.md)
+I use these to develop automation for dockerised apps on AWS - running on coreos instances, naturally ;)
 
-# Avoid pushing user-data and config.rb to your repo
+However the default opsgang/devbox\_aws:stable image used by the `devbox` function is os-agnostic.
 
-Vagrant will change these files on a `vagrant up` run.
+## helper functions (.bashrc)
 
-You won't want to commit those changes. These files are gitignored by default.
+There are a bunch of `fleet` helper functions, to make cluster navigation easier.
+
+Additionally the forwardSsh() shell function will create an ssh-agent (or re-use any existing one)
+adding all of the keys under the core user's .ssh dir.
+
