@@ -190,7 +190,7 @@ devbox ()
             vol_str="$vol_str -v /var/run/docker.sock:/var/run/docker.sock";
 
             # ... make my personal cfg available to container users on login
-            for f in .gitconfig .ssh .aws;
+            for f in .gitconfig .ssh .gnupg .aws;
             do
                 if [[ -r ~/$f ]]; then
                     vol_str="$vol_str -v $(realpath ~/$f):/etc/skel/$f:ro";
