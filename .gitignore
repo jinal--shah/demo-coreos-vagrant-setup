@@ -1,14 +1,29 @@
+## TO LIST ALL IGNORED FILES RUN THIS:
+#
+# git ls-files --others -i --exclude-standard
+
 .vagrant/
 log/
-**/.ssh
-**/.aws
-**/.gitconfig
-files/.aws/c*
-!files/homedir/profile.d/README.md
-!files/homedir/.devbox.profile.d/README.md
-files/homedir/profile.d/*
-files/homedir/.devbox.profile.d/*
 **/*.swp
-!**/*.md
 config.rb
 user-data
+
+# Personal files (and secrets) 
+## ... ignore specific files
+files/homedir/.gitconfig
+
+## ... ignore everything under a dir
+files/homedir/.aws/*
+files/homedir/.devbox.profile.d/*
+files/homedir/.gnupg/*
+files/homedir/.ssh/*
+files/homedir/profile.d/*
+
+## ... re-include ignored stuff under an excluded dir
+!**/*.md
+!files/homedir/profile.d/devbox.sh
+!files/homedir/profile.d/gnupg.sh
+!files/homedir/.devbox.profile.d/bash_completion.sh
+!files/homedir/.devbox.profile.d/gnupg.sh
+!files/homedir/.devbox.profile.d/vimrc.sh
+
