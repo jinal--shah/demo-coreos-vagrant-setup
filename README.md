@@ -1,13 +1,13 @@
-# EXAMPLES: vagrant + coreos for dev workspaces
+# EXAMPLES: vagrant + CoreOS for dev workspaces
 [1]: https://github.com/opsgang/docker_devbox_aws "devbox workspace container with aws tools"
-[2]: https://github.com/jinal--shah/devbox_aws_coreos "devbox workspace container for engineers working with coreos in aws"
+[2]: https://github.com/jinal--shah/devbox_aws_coreos "devbox workspace container for working with CoreOS in aws"
 
-__The base vagrant / coreos parts of this repo are shamelessly ripped from the__
-__far superior [coreos-vagrant](https://github.com/coreos/coreos-vagrant/) repo__ 
+__The base vagrant / CoreOS parts of this repo are shamelessly ripped from the__ 
+__[CoreOS-vagrant](https://github.com/CoreOS/CoreOS-vagrant/) repo__ 
 
 ## Why?
 
-Working with applications running on coreos, it can be useful to run your own
+Working with applications running on CoreOS, it can be useful to run your own
 local instance for emulating issues or developing automation for it.
 
 ### Customised homedir assets / login config
@@ -20,19 +20,24 @@ It will also handle files in the homedir with Windows line-endings correctly.
 
 ### devbox workspaces
 
-There is a shell helper function `devbox` as part of the deployed [.bashrc](files/.bashrc).
-This drops the user in to a docker container with user-defined volumes mapped from the coreos host.
+There is a shell helper function `devbox` as part of the deployed [.bashrc](files/homedir/.bashrc).
+This drops the user in to a docker container with user-defined volumes mapped from the CoreOS host.
 
-See the [devbox\_aws] [1] and my derived [devbox\_aws\_coreos] [2] containers for more information
+See the [devbox\_aws][1] and my derived [devbox\_aws\_coreos][2] containers for more information.
 
-I use these to develop automation for dockerised apps on AWS - running on coreos instances, naturally ;)
+I use the latter to develop automation for dockerised apps on AWS - running on CoreOS instances, naturally ;)
 
 However the default opsgang/devbox\_aws:stable image used by the `devbox` function is os-agnostic.
 
-## helper functions (.bashrc)
+## shell functions (.bashrc)
 
-There are a bunch of `fleet` helper functions, to make cluster navigation easier.
+* forwardSsh(): creates an ssh-agent (or will re-use an existing one)
+    adding all of the keys under the core user's .ssh dir.
 
-Additionally the forwardSsh() shell function will create an ssh-agent (or re-use any existing one)
-adding all of the keys under the core user's .ssh dir.
+* devbox(): drops the user in to a new named container, or in to an existing one
+    of the same name. You can export the following 2 vars to your env before calling devbox()
 
+    * $DEFAULT\_DEVBOX\_IMAGE defaults to opsgang/devbox\_aws - set this to your own
+        custom one as desired.
+	
+    * $DEFAULT\_DEVBOX\_USER defaults to `root` - set this to the user appropriate for your DEVBOX\_IMAGE
